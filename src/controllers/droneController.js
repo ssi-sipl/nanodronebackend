@@ -27,13 +27,13 @@ export async function createDrone(req, res) {
       });
     }
 
-    const existingDrone = await Drone.findOne({
-      $or: [{ name }, { droneId: drone_id }],
+    const droneExists = await Drone.exists({
+      $or: [{ drone_id: drone_id }, { name: name }],
     });
-    if (existingDrone) {
-      return res.status(409).json({
+    if (droneExists) {
+      return res.status(404).json({
         status: false,
-        message: "A drone with this name or drone_id already exists.",
+        message: "Drone with the provided ID or name alreadt exists.",
       });
     }
 
@@ -82,6 +82,14 @@ export async function sendDrone(req, res) {
         status: false,
         message:
           'Invalid input: "drone_id" is required and must be a non-empty string.',
+      });
+    }
+
+    if (!area_id || typeof area_id !== "string" || area_id.trim() === "") {
+      return res.status(400).json({
+        status: false,
+        message:
+          'Invalid input: "area_id" is required and must be a non-empty string.',
       });
     }
 
