@@ -10,6 +10,11 @@ const droneSchema = new mongoose.Schema({
     unique: true,
     required: true,
   },
+  area: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Area",
+    required: true,
+  },
 });
 
 export default mongoose.model("Drone", droneSchema);

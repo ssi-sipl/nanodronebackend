@@ -10,7 +10,7 @@ export async function createDrone(req, res) {
         message: "Missing request body",
       });
     }
-    const { name, drone_id } = req.body;
+    const { name, drone_id, area_id } = req.body;
 
     if (!name || typeof name !== "string" || name.trim() === "") {
       return res.status(400).json({
@@ -27,6 +27,22 @@ export async function createDrone(req, res) {
       });
     }
 
+    if (!area_id || typeof area_id !== "string" || area_id.trim() === "") {
+      return res.status(400).json({
+        status: false,
+        message:
+          'Invalid input: "area_id" is required and must be a non-empty string.',
+      });
+    }
+
+    const area = await Area.findOne({ area_id: area_id });
+    if (!area) {
+      return res.status(404).json({
+        status: false,
+        message: "Area with the provided ID does not exist.",
+      });
+    }
+
     const droneExists = await Drone.exists({
       $or: [{ drone_id: drone_id }, { name: name }],
     });
@@ -37,7 +53,8 @@ export async function createDrone(req, res) {
       });
     }
 
-    const drone = new Drone({ name, drone_id });
+    const drone = new Drone({ name, drone_id, area: area._id });
+    await area.updateOne({ $push: { drones: drone._id } });
     await drone.save();
 
     res
@@ -233,6 +250,48 @@ export async function dropPayload(req, res) {
     res.status(500).json({
       status: false,
       message: "Internal server error",
+    });
+  }
+}
+
+export async function getAreaByDroneId(req, res) {
+  try {
+    const { drone_id } = req.params;
+
+    if (!drone_id || typeof drone_id !== "string") {
+      return res.status(400).json({
+        status: false,
+        message: "Invalid or missing drone ID.",
+      });
+    }
+
+    const drone = await Drone.findOne({ drone_id: drone_id }).populate("area");
+
+    if (!drone) {
+      return res.status(404).json({
+        status: false,
+        message: "Drone not found.",
+      });
+    }
+
+    const area = drone.area;
+    if (!area) {
+      return res.status(404).json({
+        status: false,
+        message: "Associated area not found for this drone.",
+      });
+    }
+
+    res.status(200).json({
+      status: true,
+      message: "Area fetched successfully.",
+      data: area,
+    });
+  } catch (error) {
+    console.error("Error in getAreaByDroneId:", error);
+    res.status(500).json({
+      status: false,
+      message: "Internal server error.",
     });
   }
 }
