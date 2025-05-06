@@ -1,11 +1,10 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   createDrone,
   getAllDrones,
-  getDroneById,
   sendDrone,
   dropPayload,
-} = require("../controllers/droneController");
+} from "../controllers/droneController.js";
 
 const router = express.Router();
 
@@ -14,4 +13,4 @@ router.get("/", getAllDrones);
 router.post("/send", sendDrone);
 router.post("/dropPayload", dropPayload);
 
-module.exports = router;
+export default router;

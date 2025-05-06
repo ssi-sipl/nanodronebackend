@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const areaSchema = new mongoose.Schema({
   name: {
@@ -12,4 +12,4 @@ const areaSchema = new mongoose.Schema({
   },
 });
 
-module.exports = mongoose.model("Area", areaSchema);
+export default mongoose.model("Area", areaSchema);

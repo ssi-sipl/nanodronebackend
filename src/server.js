@@ -1,8 +1,11 @@
-require("dotenv").config();
-const express = require("express");
-const mongoose = require("mongoose");
-const mqttClient = require("./mqttClient.js");
-const cors = require("cors");
+import dotenv from "dotenv";
+import express from "express";
+import mongoose from "mongoose";
+import mqttClient from "./mqttClient.js";
+import cors from "cors";
+
+// Load environment variables
+dotenv.config();
 
 const app = express();
 
@@ -15,6 +18,7 @@ app.use(
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
@@ -27,10 +31,11 @@ app.get("/", (req, res) => {
   res.send("Nano Drone Backend is running...");
 });
 
-const droneRouter = require("./routers/droneRouter.js");
+// Import routes (must be ES modules too)
+import droneRouter from "./routers/droneRouter.js";
 app.use("/drones", droneRouter);
 
-const areaRouter = require("./routers/areaRouter.js");
+import areaRouter from "./routers/areaRouter.js";
 app.use("/areas", areaRouter);
 
 const PORT = process.env.PORT || 5000;

@@ -1,10 +1,10 @@
-const mqtt = require("mqtt");
+import mqtt from "mqtt";
 
 // Connect to the MQTT broker
 const client = mqtt.connect("mqtt://localhost:1883"); // Replace with your broker URL if different
 
-// Subscribe to the topic
-const topic = "nanodrone"; // Replace with the topic you're using
+// Topic to subscribe to
+const topic = "nanodrone";
 
 client.on("connect", () => {
   console.log("Connected to MQTT broker");
@@ -18,7 +18,6 @@ client.on("connect", () => {
 });
 
 client.on("message", (topic, message) => {
-  // message is a Buffer, so we convert it to a string
   console.log(`Message received on topic: ${topic}`);
   console.log("Message:", message.toString());
 });
@@ -26,3 +25,5 @@ client.on("message", (topic, message) => {
 client.on("error", (err) => {
   console.error("Error:", err);
 });
+
+export default client;

@@ -1,7 +1,8 @@
-require("dotenv").config();
-const mqtt = require("mqtt");
+import dotenv from "dotenv";
+import mqtt from "mqtt";
 
-// Construct full URL with auth (if needed)
+dotenv.config();
+
 const {
   MQTT_BROKER_URL,
   MQTT_BROKER_PORT,
@@ -25,4 +26,4 @@ client.on("error", (err) => {
   console.error("❌ MQTT connection error:", err);
 });
 
-module.exports = client;
+export default client;

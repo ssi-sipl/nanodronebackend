@@ -1,9 +1,9 @@
-const express = require("express");
-const { createArea, getAllAreas } = require("../controllers/areaController");
+import express from "express";
+import { createArea, getAllAreas } from "../controllers/areaController.js";
 
 const router = express.Router();
 
 router.post("/create", createArea);
 router.get("/", getAllAreas);
 
-module.exports = router;
+export default router;
