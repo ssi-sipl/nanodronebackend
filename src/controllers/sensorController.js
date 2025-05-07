@@ -43,7 +43,8 @@ export const createSensor = async (req, res) => {
 
     if (existingSensor) {
       return res.status(409).json({
-        message: "Sensor with the same sensor_id already exists.",
+        message:
+          "Sensor with the same sensor_id or sensor_name already exists.",
       });
     }
 
