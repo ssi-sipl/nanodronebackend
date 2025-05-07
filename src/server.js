@@ -38,6 +38,9 @@ app.use("/drones", droneRouter);
 import areaRouter from "./routers/areaRouter.js";
 app.use("/areas", areaRouter);
 
+import sensorRouter from "./routers/sensorRouter.js";
+app.use("/sensors", sensorRouter);
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, "0.0.0.0", () =>
   console.log(`Server running on port ${PORT}`)
