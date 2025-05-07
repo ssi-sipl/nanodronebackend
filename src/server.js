@@ -41,6 +41,9 @@ app.use("/areas", areaRouter);
 import sensorRouter from "./routers/sensorRouter.js";
 app.use("/sensors", sensorRouter);
 
+import authRouter from "./routers/authRouter.js";
+app.use("/auth", authRouter);
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, "0.0.0.0", () =>
   console.log(`Server running on port ${PORT}`)
