@@ -38,10 +38,13 @@ app.use("/drones", droneRouter);
 import areaRouter from "./routers/areaRouter.js";
 app.use("/areas", areaRouter);
 
+// import protect from "./middleware/authMiddleware.js";
 import sensorRouter from "./routers/sensorRouter.js";
+// app.use("/sensors", protect, sensorRouter);
 app.use("/sensors", sensorRouter);
 
 import authRouter from "./routers/authRouter.js";
+
 app.use("/auth", authRouter);
 
 const PORT = process.env.PORT || 5000;
