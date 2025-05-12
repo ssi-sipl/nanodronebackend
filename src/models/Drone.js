@@ -10,6 +10,10 @@ const droneSchema = new mongoose.Schema({
     unique: true,
     required: true,
   },
+  area_id: {
+    type: String,
+    required: true,
+  },
   area: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Area",

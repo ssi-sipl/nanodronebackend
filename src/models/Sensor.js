@@ -7,7 +7,6 @@ const sensorSchema = new mongoose.Schema({
   },
   area_id: {
     type: String,
-    unique: true,
     required: true,
   },
   sensor_id: {

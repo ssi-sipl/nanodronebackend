@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Area from "../models/Area.js";
 import Drone from "../models/Drone.js";
 import mqttClient from "../mqttClient.js";
@@ -53,7 +54,7 @@ export async function createDrone(req, res) {
       });
     }
 
-    const drone = new Drone({ name, drone_id, area: area._id });
+    const drone = new Drone({ name, drone_id, area_id, area: area._id });
     await area.updateOne({ $push: { drones: drone._id } });
     await drone.save();
 
@@ -293,5 +294,114 @@ export async function getAreaByDroneId(req, res) {
       status: false,
       message: "Internal server error.",
     });
+  }
+}
+
+export async function updateDrone(req, res) {
+  try {
+    if (!req.body) {
+      return res.status(400).json({
+        status: false,
+        message: "Missing request body",
+      });
+    }
+    const { id } = req.params;
+    const { name, drone_id, area_id } = req.body;
+
+    // Validate ObjectId
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        status: false,
+        message: "Invalid drone ID format.",
+      });
+    }
+
+    // Validate other fields
+    if (!name || typeof name !== "string" || name.trim() === "") {
+      return res.status(400).json({
+        status: false,
+        message:
+          'Invalid input: "name" is required and must be a non-empty string.',
+      });
+    }
+
+    if (!drone_id || typeof drone_id !== "string" || drone_id.trim() === "") {
+      return res.status(400).json({
+        status: false,
+        message:
+          'Invalid input: "drone_id" is required and must be a non-empty string.',
+      });
+    }
+
+    if (!area_id || typeof area_id !== "string" || area_id.trim() === "") {
+      return res.status(400).json({
+        status: false,
+        message:
+          'Invalid input: "area_id" is required and must be a non-empty string.',
+      });
+    }
+
+    const drone = await Drone.findById(id);
+    if (!drone) {
+      return res.status(404).json({
+        status: false,
+        message: "Drone with the provided ID does not exist.",
+      });
+    }
+
+    if (name) drone.name = name;
+    if (drone_id) drone.drone_id = drone_id;
+    if (area_id) {
+      const area = await Area.findOne({ area_id: area_id });
+      if (!area) {
+        return res.status(404).json({
+          status: false,
+          message: "Area with the provided ID does not exist.",
+        });
+      }
+      drone.area = area._id;
+      drone.area_id = area.area_id;
+    }
+
+    await drone.save();
+
+    res.status(200).json({
+      status: true,
+      message: "Drone updated successfully",
+      data: drone,
+    });
+  } catch (error) {
+    console.log("Error at controllers/droneController/updateDrone: ", error);
+    res.status(500).json({ status: false, message: "Internal server error" });
+  }
+}
+
+export async function deleteDrone(req, res) {
+  try {
+    const { id } = req.params;
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        status: false,
+        message: "Invalid drone ID format.",
+      });
+    }
+
+    const drone = await Drone.findByIdAndDelete(id);
+    if (!drone) {
+      return res.status(404).json({
+        status: false,
+        message: "Drone with the provided ID does not exist.",
+      });
+    }
+
+    res.status(200).json({
+      status: true,
+      message: "Drone deleted successfully",
+      data: drone,
+    });
+  } catch (error) {
+    console.log("Error at controllers/droneController/deleteDrone: ", error);
+    res.status(500).json({ status: false, message: "Internal server error" });
   }
 }
