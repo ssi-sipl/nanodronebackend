@@ -1,6 +1,4 @@
-import mongoose from "mongoose";
-import Area from "../models/Area.js";
-import Drone from "../models/Drone.js";
+import prisma from "../lib/prisma.js";
 import mqttClient from "../mqttClient.js";
 
 export async function createDrone(req, res) {
@@ -36,7 +34,11 @@ export async function createDrone(req, res) {
       });
     }
 
-    const area = await Area.findOne({ area_id: area_id });
+    // Find area by area_id
+    const area = await prisma.area.findUnique({
+      where: { area_id: area_id },
+    });
+
     if (!area) {
       return res.status(404).json({
         status: false,
@@ -44,23 +46,35 @@ export async function createDrone(req, res) {
       });
     }
 
-    const droneExists = await Drone.exists({
-      $or: [{ drone_id: drone_id }, { name: name }],
+    // Check if drone with same ID or name exists
+    const droneExists = await prisma.drone.findFirst({
+      where: {
+        OR: [{ drone_id: drone_id }, { name: name }],
+      },
     });
+
     if (droneExists) {
       return res.status(404).json({
         status: false,
-        message: "Drone with the provided ID or name alreadt exists.",
+        message: "Drone with the provided ID or name already exists.",
       });
     }
 
-    const drone = new Drone({ name, drone_id, area_id, area: area._id });
-    await area.updateOne({ $push: { drones: drone._id } });
-    await drone.save();
+    // Create new drone
+    const drone = await prisma.drone.create({
+      data: {
+        name,
+        drone_id,
+        area_id,
+        areaRef: area.id, // Connect to area using its ID
+      },
+    });
 
-    res
-      .status(201)
-      .json({ status: true, message: "Drone added Successfully", data: drone });
+    res.status(201).json({
+      status: true,
+      message: "Drone added Successfully",
+      data: drone,
+    });
   } catch (error) {
     console.log("Error at controllers/droneController/createDrone: ", error);
     res.status(500).json({ status: false, message: "Internal server error" });
@@ -69,10 +83,16 @@ export async function createDrone(req, res) {
 
 export async function getAllDrones(req, res) {
   try {
-    const drones = await Drone.find();
+    const drones = await prisma.drone.findMany({
+      include: {
+        area: true, // Include related area data
+      },
+    });
+
     if (!drones || drones.length === 0) {
       return res.status(404).json({ status: true, message: "No drones found" });
     }
+
     res.status(200).json({
       status: true,
       message: "Drones Fetched Successfully",
@@ -119,7 +139,11 @@ export async function sendDrone(req, res) {
       });
     }
 
-    const droneExists = await Drone.exists({ drone_id: drone_id });
+    // Check if drone exists
+    const droneExists = await prisma.drone.findUnique({
+      where: { drone_id: drone_id },
+    });
+
     if (!droneExists) {
       return res.status(404).json({
         status: false,
@@ -127,7 +151,11 @@ export async function sendDrone(req, res) {
       });
     }
 
-    const areaExists = await Area.exists({ area_id: area_id });
+    // Check if area exists
+    const areaExists = await prisma.area.findUnique({
+      where: { area_id: area_id },
+    });
+
     if (!areaExists) {
       return res.status(404).json({
         status: false,
@@ -153,7 +181,6 @@ export async function sendDrone(req, res) {
       latitude,
       longitude,
       altitude,
-      //   timestamp: new Date().toISOString(),
     };
 
     const topic = process.env.MQTT_BROKER_TOPIC;
@@ -209,7 +236,11 @@ export async function dropPayload(req, res) {
       });
     }
 
-    const droneExists = await Drone.exists({ drone_id: drone_id });
+    // Check if drone exists
+    const droneExists = await prisma.drone.findUnique({
+      where: { drone_id: drone_id },
+    });
+
     if (!droneExists) {
       return res.status(404).json({
         status: false,
@@ -217,7 +248,11 @@ export async function dropPayload(req, res) {
       });
     }
 
-    const areaExists = await Area.exists({ area_id: area_id });
+    // Check if area exists
+    const areaExists = await prisma.area.findUnique({
+      where: { area_id: area_id },
+    });
+
     if (!areaExists) {
       return res.status(404).json({
         status: false,
@@ -266,7 +301,13 @@ export async function getAreaByDroneId(req, res) {
       });
     }
 
-    const drone = await Drone.findOne({ drone_id: drone_id }).populate("area");
+    // Find drone including its associated area
+    const drone = await prisma.drone.findUnique({
+      where: { drone_id: drone_id },
+      include: {
+        area: true,
+      },
+    });
 
     if (!drone) {
       return res.status(404).json({
@@ -308,8 +349,9 @@ export async function updateDrone(req, res) {
     const { id } = req.params;
     const { name, drone_id, area_id } = req.body;
 
-    // Validate ObjectId
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+    // Validate ID
+    const droneId = parseInt(id);
+    if (!droneId || isNaN(droneId)) {
       return res.status(400).json({
         status: false,
         message: "Invalid drone ID format.",
@@ -341,34 +383,49 @@ export async function updateDrone(req, res) {
       });
     }
 
-    const drone = await Drone.findById(id);
-    if (!drone) {
+    // Find the drone
+    const existingDrone = await prisma.drone.findUnique({
+      where: { id: droneId },
+    });
+
+    if (!existingDrone) {
       return res.status(404).json({
         status: false,
         message: "Drone with the provided ID does not exist.",
       });
     }
 
-    if (name) drone.name = name;
-    if (drone_id) drone.drone_id = drone_id;
+    // Find the area if area_id is provided
+    let areaRef;
     if (area_id) {
-      const area = await Area.findOne({ area_id: area_id });
+      const area = await prisma.area.findUnique({
+        where: { area_id: area_id },
+      });
+
       if (!area) {
         return res.status(404).json({
           status: false,
           message: "Area with the provided ID does not exist.",
         });
       }
-      drone.area = area._id;
-      drone.area_id = area.area_id;
+      areaRef = area.id;
     }
 
-    await drone.save();
+    // Update the drone
+    const updatedDrone = await prisma.drone.update({
+      where: { id: droneId },
+      data: {
+        name,
+        drone_id,
+        area_id,
+        areaRef: areaRef || existingDrone.areaRef,
+      },
+    });
 
     res.status(200).json({
       status: true,
       message: "Drone updated successfully",
-      data: drone,
+      data: updatedDrone,
     });
   } catch (error) {
     console.log("Error at controllers/droneController/updateDrone: ", error);
@@ -380,14 +437,20 @@ export async function deleteDrone(req, res) {
   try {
     const { id } = req.params;
 
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+    // Validate ID
+    const droneId = parseInt(id);
+    if (!droneId || isNaN(droneId)) {
       return res.status(400).json({
         status: false,
         message: "Invalid drone ID format.",
       });
     }
 
-    const drone = await Drone.findByIdAndDelete(id);
+    // Find and delete the drone
+    const drone = await prisma.drone.delete({
+      where: { id: droneId },
+    });
+
     if (!drone) {
       return res.status(404).json({
         status: false,

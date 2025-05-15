@@ -1,14 +1,11 @@
-import Area from "../models/Area.js";
-import mongoose from "mongoose";
-import Drone from "../models/Drone.js";
+import prisma from "../lib/prisma.js"; // adjust if your path differs
 
 export async function createArea(req, res) {
   try {
     if (!req.body) {
-      return res.status(400).json({
-        status: false,
-        message: "Missing request body",
-      });
+      return res
+        .status(400)
+        .json({ status: false, message: "Missing request body" });
     }
 
     const { name, area_id } = req.body;
@@ -28,41 +25,52 @@ export async function createArea(req, res) {
       });
     }
 
-    const existingArea = await Area.findOne({
-      $or: [{ name }, { areaId: area_id }],
+    const existingArea = await prisma.area.findFirst({
+      where: {
+        OR: [{ name }, { area_id }],
+      },
     });
+
     if (existingArea) {
       return res.status(409).json({
         status: false,
-        message: "A area with this name or area_id already exists.",
+        message: "An area with this name or area_id already exists.",
       });
     }
 
-    const area = new Area({ name, area_id });
-    await area.save();
+    const newArea = await prisma.area.create({
+      data: {
+        name,
+        area_id,
+      },
+    });
 
-    res
-      .status(201)
-      .json({ status: true, message: "Area added Successfully", data: area });
+    res.status(201).json({
+      status: true,
+      message: "Area added successfully",
+      data: newArea,
+    });
   } catch (error) {
-    console.log("Error at controllers/areaController/createArea: ", error);
+    console.error("Error at createArea:", error);
     res.status(500).json({ status: false, message: "Internal server error" });
   }
 }
 
 export async function getAllAreas(req, res) {
   try {
-    const areas = await Area.find();
-    if (!areas || areas.length === 0) {
+    const areas = await prisma.area.findMany();
+
+    if (!areas.length) {
       return res.status(404).json({ status: true, message: "No areas found" });
     }
+
     res.status(200).json({
       status: true,
-      message: "Areas Fetched Successfully",
+      message: "Areas fetched successfully",
       data: areas,
     });
   } catch (error) {
-    console.log("Error at controllers/areaController/getAllAreas: ", error);
+    console.error("Error at getAllAreas:", error);
     res.status(500).json({ status: false, message: "Internal server error" });
   }
 }
@@ -71,94 +79,77 @@ export async function getAreaById(req, res) {
   try {
     const { id } = req.params;
 
-    // Validate ObjectId
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        status: false,
-        message: "Invalid area ID format.",
-      });
-    }
-
-    // Fetch area and populate drones
-    const area = await Area.findById(id).populate("drones");
+    const area = await prisma.area.findUnique({
+      where: { id: parseInt(id) },
+      include: {
+        drones: true, // populating drones
+      },
+    });
 
     if (!area) {
-      return res.status(404).json({
-        status: false,
-        message: "Area not found.",
-      });
+      return res.status(404).json({ status: false, message: "Area not found" });
     }
 
-    return res.status(200).json({
+    res.status(200).json({
       status: true,
-      message: "Area fetched successfully.",
+      message: "Area fetched successfully",
       data: area,
     });
   } catch (error) {
-    console.error("Error at controllers/areaController/getAreaById:", error);
-    return res.status(500).json({
-      status: false,
-      message: "Internal server error.",
-    });
+    console.error("Error at getAreaById:", error);
+    res.status(500).json({ status: false, message: "Internal server error" });
   }
 }
 
 export async function updateArea(req, res) {
   try {
-    if (!req.body) {
-      return res.status(400).json({
-        status: false,
-        message: "Missing request body",
-      });
-    }
     const { id, name, area_id } = req.body;
 
-    // Validate ObjectId
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({
-        status: false,
-        message: "Invalid area ID format.",
-      });
+    if (!id || isNaN(parseInt(id))) {
+      return res
+        .status(400)
+        .json({ status: false, message: "Invalid area ID format." });
     }
 
-    // Check if area exists
-    const area = await Area.findById(id);
-    if (!area) {
-      return res.status(404).json({
-        status: false,
-        message: "Area not found.",
-      });
-    }
-
-    // Check for name/area_id uniqueness
-    const existingArea = await Area.findOne({
-      _id: { $ne: id },
-      $or: [{ name }, { area_id }],
+    const existingArea = await prisma.area.findUnique({
+      where: { id: parseInt(id) },
     });
-    if (existingArea) {
+    if (!existingArea) {
+      return res
+        .status(404)
+        .json({ status: false, message: "Area not found." });
+    }
+
+    const conflict = await prisma.area.findFirst({
+      where: {
+        id: { not: parseInt(id) },
+        OR: [{ name }, { area_id }],
+      },
+    });
+
+    if (conflict) {
       return res.status(409).json({
         status: false,
         message: "Another area with this name or area_id already exists.",
       });
     }
 
-    // Update values if provided
-    if (name) area.name = name.trim();
-    if (area_id) area.area_id = area_id.trim();
-
-    const updatedArea = await area.save();
+    const updated = await prisma.area.update({
+      where: { id: parseInt(id) },
+      data: {
+        name,
+        area_id,
+      },
+    });
 
     return res.status(200).json({
       status: true,
       message: "Area updated successfully.",
-      data: updatedArea,
+      data: updated,
     });
   } catch (error) {
-    console.error("Error at controllers/areaController/updateArea:", error);
-    return res.status(500).json({
-      status: false,
-      message: "Internal server error.",
-    });
+    console.error("Error at updateArea:", error);
+    res.status(500).json({ status: false, message: "Internal server error" });
   }
 }
 
@@ -166,24 +157,24 @@ export async function deleteArea(req, res) {
   try {
     const { id } = req.params;
 
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+    if (!id || isNaN(parseInt(id))) {
       return res
         .status(400)
         .json({ status: false, message: "Invalid area ID format." });
     }
 
-    const area = await Area.findById(id);
+    const area = await prisma.area.findUnique({ where: { id: parseInt(id) } });
     if (!area) {
       return res
         .status(404)
         .json({ status: false, message: "Area not found." });
     }
 
-    // Delete all drones linked to this area
-    await Drone.deleteMany({ area: id });
+    // Delete drones linked to the area
+    await prisma.drone.deleteMany({ where: { areaRef: parseInt(id) } });
 
     // Then delete the area
-    await area.deleteOne();
+    await prisma.area.delete({ where: { id: parseInt(id) } });
 
     return res.status(200).json({
       status: true,
@@ -191,8 +182,6 @@ export async function deleteArea(req, res) {
     });
   } catch (error) {
     console.error("Error at deleteArea:", error);
-    return res
-      .status(500)
-      .json({ status: false, message: "Internal server error." });
+    res.status(500).json({ status: false, message: "Internal server error" });
   }
 }

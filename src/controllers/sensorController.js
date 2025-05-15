@@ -1,6 +1,4 @@
-import mongoose from "mongoose";
-import Area from "../models/Area.js";
-import Sensor from "../models/Sensor.js"; // Adjust path as needed
+import prisma from "../lib/prisma.js";
 
 // Create a new sensor
 export const createSensor = async (req, res) => {
@@ -37,9 +35,11 @@ export const createSensor = async (req, res) => {
         .json({ message: "Name, area_id, and sensor_id must be strings." });
     }
 
-    // Check if a sensor with the same area_id or sensor_id already exists
-    const existingSensor = await Sensor.findOne({
-      $or: [{ sensor_id }, { name }],
+    // Check if a sensor with the same sensor_id or name already exists
+    const existingSensor = await prisma.sensor.findFirst({
+      where: {
+        OR: [{ sensor_id }, { name }],
+      },
     });
 
     if (existingSensor) {
@@ -49,23 +49,27 @@ export const createSensor = async (req, res) => {
       });
     }
 
-    const existingArea = await Area.exists({ area_id });
+    // Check if the area exists
+    const existingArea = await prisma.area.findUnique({
+      where: { area_id },
+    });
+
     if (!existingArea) {
       return res.status(404).json({
         message: "Area with the provided area_id does not exist.",
       });
     }
 
-    // Create and save the sensor
-    const newSensor = new Sensor({
-      name,
-      area_id,
-      sensor_id,
-      latitude,
-      longitude,
+    // Create the sensor
+    const newSensor = await prisma.sensor.create({
+      data: {
+        name,
+        area_id,
+        sensor_id,
+        latitude,
+        longitude,
+      },
     });
-
-    await newSensor.save();
 
     return res
       .status(201)
@@ -79,7 +83,8 @@ export const createSensor = async (req, res) => {
 
 export const getAllSensors = async (req, res) => {
   try {
-    const sensors = await Sensor.find();
+    const sensors = await prisma.sensor.findMany();
+
     if (!sensors || sensors.length === 0) {
       return res
         .status(404)
@@ -92,7 +97,7 @@ export const getAllSensors = async (req, res) => {
       data: sensors,
     });
   } catch (error) {
-    console.log("Error at controllers/droneController/getAllAreas: ", error);
+    console.log("Error at controllers/sensorController/getAllSensors: ", error);
     res.status(500).json({ status: false, message: "Internal server error" });
   }
 };
@@ -107,17 +112,20 @@ export const updateSensor = async (req, res) => {
     const { id } = req.params;
     const { name, area_id, sensor_id, latitude, longitude } = req.body;
 
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+    // Validate ID
+    const sensorId = parseInt(id);
+    if (!sensorId || isNaN(sensorId)) {
       return res.status(400).json({
         status: false,
         message: "Invalid ID format.",
       });
     }
+
     // Validate input
     if (!sensor_id) {
       return res
         .status(400)
-        .json({ staus: false, message: "Sensor ID is required." });
+        .json({ status: false, message: "Sensor ID is required." });
     }
 
     if (
@@ -132,28 +140,35 @@ export const updateSensor = async (req, res) => {
       });
     }
 
-    // Find the sensor by ID
-    const sensor = await Sensor.findById(id);
+    // Check if the sensor exists
+    const existingSensor = await prisma.sensor.findUnique({
+      where: { id: sensorId },
+    });
 
-    if (!sensor) {
+    if (!existingSensor) {
       return res
         .status(404)
         .json({ status: false, message: "Sensor not found." });
     }
 
-    // Update the sensor fields
-    if (name) sensor.name = name;
-    if (area_id) sensor.area_id = area_id;
-    if (latitude !== undefined) sensor.latitude = latitude;
-    if (longitude !== undefined) sensor.longitude = longitude;
+    // Prepare update data
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (area_id) updateData.area_id = area_id;
+    if (sensor_id) updateData.sensor_id = sensor_id;
+    if (latitude !== undefined) updateData.latitude = latitude;
+    if (longitude !== undefined) updateData.longitude = longitude;
 
-    // Save the updated sensor
-    await sensor.save();
+    // Update the sensor
+    const updatedSensor = await prisma.sensor.update({
+      where: { id: sensorId },
+      data: updateData,
+    });
 
     return res.status(200).json({
       status: true,
       message: "Sensor updated successfully",
-      sensor,
+      sensor: updatedSensor,
     });
   } catch (error) {
     return res
@@ -166,7 +181,9 @@ export const deleteSensor = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+    // Validate ID
+    const sensorId = parseInt(id);
+    if (!sensorId || isNaN(sensorId)) {
       return res.status(400).json({
         status: false,
         message: "Invalid ID format.",
@@ -174,7 +191,12 @@ export const deleteSensor = async (req, res) => {
     }
 
     // Find and delete the sensor
-    const deletedSensor = await Sensor.findByIdAndDelete(id);
+    const deletedSensor = await prisma.sensor
+      .delete({
+        where: { id: sensorId },
+      })
+      .catch(() => null); // Handle case where sensor doesn't exist
+
     if (!deletedSensor) {
       return res
         .status(404)
