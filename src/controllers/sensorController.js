@@ -60,8 +60,10 @@ export const createSensor = async (req, res) => {
       });
     }
 
-    lat_trunc = latitude.toFixed(6);
-    long_trunc = longitude.toFixed(6);
+    console.log(latitude.toFixed(6));
+    console.log(typeof parseFloat(latitude.toFixed(6)));
+    console.log(longitude.toFixed(6));
+    console.log(typeof parseFloat(longitude.toFixed(6)));
 
     // Create the sensor
     const newSensor = await prisma.sensor.create({
@@ -69,8 +71,8 @@ export const createSensor = async (req, res) => {
         name,
         area_id,
         sensor_id,
-        latitude: lat_trunc,
-        longitude: long_trunc,
+        latitude: Number(latitude.toPrecision(8)),
+        longitude: Number(longitude.toPrecision(8)),
       },
     });
 
