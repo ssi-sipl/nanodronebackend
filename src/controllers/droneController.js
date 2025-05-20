@@ -113,7 +113,8 @@ export async function sendDrone(req, res) {
       });
     }
 
-    const { drone_id, area_id, latitude, longitude, altitude } = req.body;
+    const { drone_id, area_id, latitude, longitude, altitude, usb_address } =
+      req.body;
 
     if (!drone_id || typeof drone_id !== "string" || drone_id.trim() === "") {
       return res.status(400).json({
@@ -136,6 +137,18 @@ export async function sendDrone(req, res) {
         status: false,
         message:
           'Invalid input: "latitude", "longitude", and "altitude" are required.',
+      });
+    }
+
+    if (
+      !usb_address ||
+      typeof usb_address !== "string" ||
+      usb_address.trim() === ""
+    ) {
+      return res.status(400).json({
+        status: false,
+        message:
+          'Invalid input: "usb_address" is required and must be a non-empty string.',
       });
     }
 
@@ -181,6 +194,7 @@ export async function sendDrone(req, res) {
       latitude,
       longitude,
       altitude,
+      usb_address,
     };
 
     const topic = process.env.MQTT_BROKER_TOPIC;
