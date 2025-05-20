@@ -60,14 +60,17 @@ export const createSensor = async (req, res) => {
       });
     }
 
+    lat_trunc = latitude.toFixed(6);
+    long_trunc = longitude.toFixed(6);
+
     // Create the sensor
     const newSensor = await prisma.sensor.create({
       data: {
         name,
         area_id,
         sensor_id,
-        latitude,
-        longitude,
+        latitude: lat_trunc,
+        longitude: long_trunc,
       },
     });
 
