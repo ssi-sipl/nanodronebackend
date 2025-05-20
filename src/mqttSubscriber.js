@@ -7,7 +7,8 @@ const options = {
   password: "gxuvimr", // replace with your actual password
 };
 
-const client = mqtt.connect("mqtt://192.168.1.200:1883", options);
+// const client = mqtt.connect("mqtt://192.168.1.200:1883", options);
+const client = mqtt.connect("mqtt://localhost:1883", options);
 // Topic to subscribe to
 const topic = "nanodrone";
 

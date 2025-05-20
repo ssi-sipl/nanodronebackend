@@ -189,12 +189,12 @@ export async function sendDrone(req, res) {
     }
 
     const droneData = {
-      droneid: drone_id,
-      areaid: area_id,
-      latitude: latitude,
-      longitude: longitude,
-      targetAltitude: altitude,
-      usbAddress: usb_address,
+      droneid: drone_id.toString(),
+      areaid: area_id.toString(),
+      latitude: latitude.toString(),
+      longitude: longitude.toString(),
+      targetAltitude: altitude.toString(),
+      usbAddress: usb_address.toString(),
     };
 
     const topic = process.env.MQTT_BROKER_TOPIC;
