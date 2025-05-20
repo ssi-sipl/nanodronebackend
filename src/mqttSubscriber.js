@@ -1,8 +1,13 @@
 import mqtt from "mqtt";
 
 // Connect to the MQTT broker
-const client = mqtt.connect("mqtt://localhost:1883"); // Replace with your broker URL if different
+// const client = mqtt.connect("mqtt://localhost:1883"); // Replace with your broker URL if different
+const options = {
+  username: "dro", // replace with your actual username
+  password: "gxuvimr", // replace with your actual password
+};
 
+const client = mqtt.connect("mqtt://192.168.1.200:1883", options);
 // Topic to subscribe to
 const topic = "nanodrone";
 
