@@ -275,6 +275,7 @@ export async function dropPayload(req, res) {
     }
 
     const dropData = {
+      event: "release_gripper",
       drone_id,
       area_id,
     };
