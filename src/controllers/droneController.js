@@ -1,5 +1,16 @@
 import prisma from "../lib/prisma.js";
 import mqttClient from "../mqttClient.js";
+import yaml from "js-yaml";
+import fs from "fs/promises";
+import { fileURLToPath } from "url";
+import path from "path";
+import { restartMediaMTXContainer } from "../lib/restartMediaMTXDocker.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Resolve the path to mediamtx.yml
+const mediamtxPath = path.resolve(__dirname, "../../mediamtx.yml");
 
 export async function createDrone(req, res) {
   try {
@@ -9,12 +20,19 @@ export async function createDrone(req, res) {
         message: "Missing request body",
       });
     }
-    const { name, drone_id, area_id } = req.body;
+    const { name, drone_id, area_id, cameraFeed } = req.body;
 
     if (!name || typeof name !== "string" || name.trim() === "") {
       return res.status(400).json({
         message:
           'Invalid input: "name" is required and must be a non-empty string.',
+      });
+    }
+
+    if (typeof cameraFeed !== "string") {
+      return res.status(400).json({
+        status: false,
+        message: 'Invalid input: "cameraFeed" must be a string.',
       });
     }
 
@@ -67,8 +85,28 @@ export async function createDrone(req, res) {
         drone_id,
         area_id,
         areaRef: area.id, // Connect to area using its ID
+        cameraFeed: cameraFeed || "rtsp://user:pass@ip:554/snl/live/1/1/3", // Default value if not provided
       },
     });
+
+    // Load the YAML configuration file
+    const fileContents = await fs.readFile(mediamtxPath, "utf8");
+    const config = yaml.load(fileContents) || {};
+
+    if (!config.paths) {
+      config.paths = {};
+    }
+
+    config.paths[drone_id] = {
+      source: cameraFeed || "rtsp://user:pass@ip:554/snl/live/1/1/3",
+      sourceOnDemand: true,
+    };
+
+    const newYaml = yaml.dump(config);
+
+    await fs.writeFile(mediamtxPath, newYaml, "utf8");
+
+    await restartMediaMTXContainer();
 
     res.status(201).json({
       status: true,

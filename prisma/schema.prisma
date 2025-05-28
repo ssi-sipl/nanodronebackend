@@ -26,6 +26,7 @@ model Drone {
   drone_id String  @unique
   area_id  String
   areaRef  Int
+  cameraFeed String @default("rtsp://<user>:<admin>@<ip>:554/{stream url}")
   area     Area    @relation(fields: [areaRef], references: [id])
 }
 

@@ -1,0 +1,20 @@
+api: true
+apiAddress: ':9997'
+rtsp: true
+rtspAddress: ':8554'
+protocols:
+  - tcp
+  - udp
+webrtc: true
+webrtcAddress: ':8889'
+webrtcAllowOrigin: '*'
+paths:
+  cam1:
+    source: rtsp://admin:123456Ai@192.168.1.120:554/snl/live/1/1/3
+    sourceOnDemand: true
+  test-id-222234:
+    source: rtsp://user:pass@ip:554/snl/live/1/1/3
+    sourceOnDemand: true
+  test-id-2222345:
+    source: rtsp://user:pass@ip:554/snl/live/1/1/3
+    sourceOnDemand: true
