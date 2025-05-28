@@ -8,6 +8,7 @@ const {
   MQTT_BROKER_PORT,
   MQTT_BROKER_USERNAME,
   MQTT_BROKER_PASSWORD,
+  MQTT_BROKER_TOPIC,
 } = process.env;
 
 const options = {
@@ -18,12 +19,33 @@ const options = {
 
 const client = mqtt.connect(MQTT_BROKER_URL, options);
 
-client.on("connect", () => {
-  console.log("✅ Connected to MQTT broker");
-});
+let io = null;
 
-client.on("error", (err) => {
-  console.error("❌ MQTT connection error:", err);
-});
+function setupMqtt(serverIO) {
+  io = serverIO;
 
-export default client;
+  client.on("connect", () => {
+    console.log("✅ Connected to MQTT broker");
+    client.subscribe(MQTT_BROKER_TOPIC, (err) => {
+      if (err) {
+        console.error("MQTT subscribe error:", err);
+      } else {
+        console.log(`📡 Subscribed to ${MQTT_BROKER_TOPIC}`);
+      }
+    });
+  });
+
+  client.on("message", (topic, message) => {
+    try {
+      const parsed = JSON.parse(message.toString());
+      console.log("📥 Parsed data:", parsed);
+      if (io) {
+        io.emit("telemetry", parsed); // Emit structured data to frontend
+      }
+    } catch (err) {
+      console.error("Invalid JSON message:", message.toString());
+    }
+  });
+}
+
+export default setupMqtt;
