@@ -1,6 +1,5 @@
 import dotenv from "dotenv";
 import express from "express";
-import mongoose from "mongoose";
 import { Server } from "socket.io";
 import setupMqtt from "./mqttClient.js";
 import http from "http";
@@ -28,14 +27,6 @@ app.use(
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-mongoose
-  .connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log("✅ MongoDB connected"))
-  .catch((err) => console.error(err));
 
 app.get("/", (req, res) => {
   res.send("✅ Nano Drone Backend is running...");
